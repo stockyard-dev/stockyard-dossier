@@ -1,69 +1,15 @@
 package store
-
-import (
-	"database/sql"
-	"fmt"
-	"os"
-	"path/filepath"
-
-	_ "modernc.org/sqlite"
-)
-
-type DB struct {
-	*sql.DB
-}
-
-func Open(dataDir string) (*DB, error) {
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return nil, fmt.Errorf("mkdir: %w", err)
-	}
-	dsn := filepath.Join(dataDir, "dossier.db") + "?_journal_mode=WAL&_busy_timeout=5000"
-	db, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("open: %w", err)
-	}
-	db.SetMaxOpenConns(1)
-	if err := migrate(db); err != nil {
-		return nil, fmt.Errorf("migrate: %w", err)
-	}
-	return &DB{db}, nil
-}
-
-func migrate(db *sql.DB) error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS contacts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        company TEXT,
-        email TEXT,
-        phone TEXT,
-        status TEXT DEFAULT 'lead',
-        notes TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     );
-     CREATE TABLE IF NOT EXISTS interactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        contact_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        notes TEXT,
-        occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     );
-     CREATE TABLE IF NOT EXISTS reminders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        contact_id INTEGER NOT NULL,
-        message TEXT NOT NULL,
-        due_at DATETIME NOT NULL,
-        completed INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     );
-     CREATE TABLE IF NOT EXISTS deals (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        contact_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        value_cents INTEGER DEFAULT 0,
-        stage TEXT DEFAULT 'prospect',
-        closed_at DATETIME,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-     );`)
-	return err
-}
+import("database/sql";"fmt";"os";"path/filepath";"time";_ "modernc.org/sqlite")
+type DB struct{*sql.DB}
+type Contact struct{ID int64 `json:"id"`;FirstName string `json:"first_name"`;LastName string `json:"last_name"`;Email string `json:"email"`;Phone string `json:"phone"`;Company string `json:"company"`;Stage string `json:"stage"`;Tags string `json:"tags"`;Notes string `json:"notes"`;CreatedAt time.Time `json:"created_at"`}
+type Activity struct{ID int64 `json:"id"`;ContactID int64 `json:"contact_id"`;ContactName string `json:"contact_name,omitempty"`;Kind string `json:"kind"`;Summary string `json:"summary"`;CreatedAt time.Time `json:"created_at"`}
+func Open(dataDir string)(*DB,error){if err:=os.MkdirAll(dataDir,0755);err!=nil{return nil,fmt.Errorf("mkdir: %w",err)};dsn:=filepath.Join(dataDir,"dossier.db")+"?_journal_mode=WAL&_busy_timeout=5000";db,err:=sql.Open("sqlite",dsn);if err!=nil{return nil,fmt.Errorf("open: %w",err)};db.SetMaxOpenConns(1);if err:=migrate(db);err!=nil{return nil,fmt.Errorf("migrate: %w",err)};return &DB{db},nil}
+func migrate(db *sql.DB)error{_,err:=db.Exec(`CREATE TABLE IF NOT EXISTS contacts(id INTEGER PRIMARY KEY AUTOINCREMENT,first_name TEXT NOT NULL,last_name TEXT DEFAULT '',email TEXT DEFAULT '',phone TEXT DEFAULT '',company TEXT DEFAULT '',stage TEXT DEFAULT 'lead',tags TEXT DEFAULT '',notes TEXT DEFAULT '',created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS activities(id INTEGER PRIMARY KEY AUTOINCREMENT,contact_id INTEGER NOT NULL,kind TEXT DEFAULT 'note',summary TEXT NOT NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE INDEX IF NOT EXISTS act_contact ON activities(contact_id,created_at DESC);`);return err}
+func(db *DB)ListContacts(stage,search string)([]Contact,error){q:=`SELECT id,first_name,last_name,email,phone,company,stage,tags,notes,created_at FROM contacts WHERE 1=1`;var args[]interface{};if stage!=""{q+=" AND stage=?";args=append(args,stage)};if search!=""{q+=" AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR company LIKE ?)";args=append(args,"%"+search+"%","%"+search+"%","%"+search+"%","%"+search+"%")};q+=" ORDER BY created_at DESC";rows,err:=db.Query(q,args...);if err!=nil{return nil,err};defer rows.Close();var out[]Contact;for rows.Next(){var c Contact;rows.Scan(&c.ID,&c.FirstName,&c.LastName,&c.Email,&c.Phone,&c.Company,&c.Stage,&c.Tags,&c.Notes,&c.CreatedAt);out=append(out,c)};return out,nil}
+func(db *DB)CreateContact(c *Contact)error{if c.Stage==""{c.Stage="lead"};res,err:=db.Exec(`INSERT INTO contacts(first_name,last_name,email,phone,company,stage,tags,notes)VALUES(?,?,?,?,?,?,?,?)`,c.FirstName,c.LastName,c.Email,c.Phone,c.Company,c.Stage,c.Tags,c.Notes);if err!=nil{return err};c.ID,_=res.LastInsertId();return nil}
+func(db *DB)UpdateContactStage(id int64,stage string)error{_,err:=db.Exec(`UPDATE contacts SET stage=? WHERE id=?`,stage,id);return err}
+func(db *DB)UpdateContactNotes(id int64,notes string)error{_,err:=db.Exec(`UPDATE contacts SET notes=? WHERE id=?`,notes,id);return err}
+func(db *DB)DeleteContact(id int64)error{_,err:=db.Exec(`DELETE FROM contacts WHERE id=?`,id);_,_=db.Exec(`DELETE FROM activities WHERE contact_id=?`,id);return err}
+func(db *DB)ListActivities(contactID int64)([]Activity,error){rows,err:=db.Query(`SELECT a.id,a.contact_id,COALESCE(c.first_name||' '||c.last_name,''),a.kind,a.summary,a.created_at FROM activities a LEFT JOIN contacts c ON c.id=a.contact_id WHERE a.contact_id=? ORDER BY a.created_at DESC LIMIT 50`,contactID);if err!=nil{return nil,err};defer rows.Close();var out[]Activity;for rows.Next(){var a Activity;rows.Scan(&a.ID,&a.ContactID,&a.ContactName,&a.Kind,&a.Summary,&a.CreatedAt);out=append(out,a)};return out,nil}
+func(db *DB)AddActivity(a *Activity)error{res,err:=db.Exec(`INSERT INTO activities(contact_id,kind,summary)VALUES(?,?,?)`,a.ContactID,a.Kind,a.Summary);if err!=nil{return err};a.ID,_=res.LastInsertId();return nil}
+func(db *DB)StageCounts()(map[string]int,error){rows,err:=db.Query(`SELECT stage,COUNT(*) FROM contacts GROUP BY stage`);if err!=nil{return nil,err};defer rows.Close();m:=map[string]int{"lead":0,"prospect":0,"customer":0,"churned":0};for rows.Next(){var s string;var n int;rows.Scan(&s,&n);m[s]=n};return m,nil}

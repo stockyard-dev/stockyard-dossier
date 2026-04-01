@@ -1,120 +1,43 @@
 package server
 
 var dashboardHTML = []byte(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stockyard Dossier</title>
-<style>
-  :root {
-    --bg: #1a1410;
-    --surface: #241c15;
-    --border: #3d2e1e;
-    --rust: #c4622d;
-    --leather: #8b5e3c;
-    --cream: #f5e6c8;
-    --muted: #7a6550;
-    --text: #e8d5b0;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace, sans-serif; min-height: 100vh; }
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
-  .logo { color: var(--rust); font-size: 1.25rem; font-weight: 700; letter-spacing: 0.05em; }
-  .badge { background: var(--rust); color: var(--cream); font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
-  main { max-width: 960px; margin: 2rem auto; padding: 0 2rem; }
-  .hero { text-align: center; padding: 3rem 0 2rem; }
-  .hero h1 { font-size: 2rem; color: var(--cream); margin-bottom: 0.5rem; }
-  .hero p { color: var(--muted); font-size: 0.95rem; max-width: 480px; margin: 0 auto; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 2rem 0; }
-  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem; text-align: center; }
-  .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--rust); }
-  .stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem; margin-bottom: 1rem; }
-  .card h2 { font-size: 1rem; color: var(--cream); margin-bottom: 1rem; }
-  .tier-box { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .tier { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1rem; }
-  .tier.pro { border-color: var(--rust); }
-  .tier-name { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem; }
-  .tier.pro .tier-name { color: var(--rust); }
-  .tier-desc { font-size: 0.85rem; color: var(--text); }
-  .tier-price { font-size: 0.8rem; color: var(--leather); margin-top: 0.5rem; }
-  footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.75rem; }
-  footer a { color: var(--leather); text-decoration: none; }
-  .endpoint-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-  .endpoint-table th { text-align: left; color: var(--muted); padding: 0.5rem; border-bottom: 1px solid var(--border); }
-  .endpoint-table td { padding: 0.5rem; border-bottom: 1px solid var(--border); color: var(--text); }
-  .method { color: var(--rust); font-weight: 600; }
-</style>
-</head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Stockyard Dossier</title><style>:root{--bg:#1a1410;--surface:#241c15;--border:#3d2e1e;--rust:#c4622d;--cream:#f5e6c8;--muted:#7a6550;--text:#e8d5b0}*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace,sans-serif}header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem}.logo{color:var(--rust);font-size:1.25rem;font-weight:700}.badge{background:var(--rust);color:var(--cream);font-size:0.65rem;padding:0.2rem 0.5rem;border-radius:3px;font-weight:600;text-transform:uppercase}main{max-width:1200px;margin:0 auto;padding:2rem}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}.stat{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.25rem;text-align:center}.stat-value{font-size:1.75rem;font-weight:700;color:var(--rust)}.stat-label{font-size:0.75rem;color:var(--muted);margin-top:0.25rem;text-transform:uppercase;letter-spacing:0.05em}.layout{display:grid;grid-template-columns:1fr 360px;gap:1.5rem}.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.5rem;margin-bottom:1rem}.card h2{font-size:0.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem}.form-row{display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap}select,input,textarea{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.75rem;border-radius:4px;font-family:inherit;font-size:0.85rem;flex:1}textarea{resize:vertical;min-height:80px;flex:none;width:100%}.btn{background:var(--rust);color:var(--cream);border:none;padding:0.5rem 1rem;border-radius:4px;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600}.btn:hover{opacity:0.85}.btn-sm{padding:0.25rem 0.6rem;font-size:0.75rem}.btn-danger{background:#7a2020}.contact-item{padding:0.6rem 0.75rem;border-radius:4px;cursor:pointer;border-bottom:1px solid var(--border)}.contact-item:hover,.contact-item.active{background:rgba(196,98,45,0.12)}.c-name{font-weight:600;color:var(--cream);font-size:0.88rem}.c-meta{font-size:0.72rem;color:var(--muted)}.stage-badge{font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:3px}.stage-lead{background:#2a1a3a;color:#c9a0dc}.stage-prospect{background:#1a2a3a;color:#5bc0de}.stage-customer{background:#1a3a1a;color:#5cb85c}.stage-churned{background:#2a2a2a;color:#888}.activity-item{padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.82rem}.activity-kind{font-size:0.7rem;color:var(--muted);text-transform:uppercase;margin-right:0.5rem}.empty{color:var(--muted);font-size:0.85rem;padding:1rem 0;text-align:center}.pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:1.5rem}.pipe-col{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:0.75rem}.pipe-header{font-size:0.75rem;color:var(--muted);text-transform:uppercase;margin-bottom:0.5rem;display:flex;justify-content:space-between}.pipe-count{color:var(--rust);font-weight:700}</style></head>
 <body>
-<header>
-  <span class="logo">⬡ Stockyard</span>
-  <span style="color:var(--muted);">/</span>
-  <span style="color:var(--cream);font-weight:600;">Dossier</span>
-  <span class="badge">v0.1.0</span>
-</header>
+<header><span class="logo">&#x2B21; Stockyard</span><span style="color:var(--muted)">/</span><span style="color:var(--cream);font-weight:600">Dossier</span><span class="badge">CRM</span></header>
 <main>
-  <div class="hero">
-    <h1>Dossier</h1>
-    <p>CRM for solo founders and consultants — contacts, notes, follow-up reminders, deal pipeline</p>
-  </div>
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value" id="stat-items">—</div>
-      <div class="stat-label">Total Items</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">9280</div>
-      <div class="stat-label">Port</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="stat-tier">—</div>
-      <div class="stat-label">Tier</div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>Tier &amp; Limits</h2>
-    <div class="tier-box">
-      <div class="tier">
-        <div class="tier-name">Free</div>
-        <div class="tier-desc">50 contacts, no pipeline</div>
-        <div class="tier-price">$0/mo</div>
-      </div>
-      <div class="tier pro">
-        <div class="tier-name">Pro</div>
-        <div class="tier-desc">Unlimited contacts and pipeline</div>
-        <div class="tier-price">$2.99/mo</div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>API Endpoints</h2>
-    <table class="endpoint-table">
-      <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
-      <tbody>
-        <tr><td class="method">GET</td><td>/health</td><td>Health check</td></tr>
-        <tr><td class="method">GET</td><td>/api/version</td><td>Version info</td></tr>
-        <tr><td class="method">GET</td><td>/api/limits</td><td>Current tier limits</td></tr>
-        <tr><td class="method">GET</td><td>/api/items</td><td>List items</td></tr>
-        <tr><td class="method">POST</td><td>/api/items</td><td>Create item</td></tr>
-        <tr><td class="method">GET</td><td>/api/items/{id}</td><td>Get item</td></tr>
-        <tr><td class="method">PUT</td><td>/api/items/{id}</td><td>Update item</td></tr>
-        <tr><td class="method">DELETE</td><td>/api/items/{id}</td><td>Delete item</td></tr>
-      </tbody>
-    </table>
-  </div>
+<div class="stats"><div class="stat" id="stat-lead"><div class="stat-value">0</div><div class="stat-label">Leads</div></div><div class="stat" id="stat-prospect"><div class="stat-value">0</div><div class="stat-label">Prospects</div></div><div class="stat" id="stat-customer"><div class="stat-value">0</div><div class="stat-label">Customers</div></div><div class="stat" id="stat-churned"><div class="stat-value">0</div><div class="stat-label">Churned</div></div></div>
+<div class="layout">
+<div>
+<div class="card"><h2>Add Contact</h2>
+<div class="form-row"><input id="f-fname" placeholder="First name"><input id="f-lname" placeholder="Last name"></div>
+<div class="form-row"><input id="f-email" placeholder="Email"><input id="f-phone" placeholder="Phone"></div>
+<div class="form-row"><input id="f-co" placeholder="Company"><select id="f-stage"><option value="lead">Lead</option><option value="prospect">Prospect</option><option value="customer">Customer</option></select></div>
+<button class="btn btn-sm" onclick="addContact()">Add Contact</button></div>
+<div class="card"><h2>Contacts <input id="f-search" placeholder="Search..." oninput="loadContacts()" style="flex:0;width:150px;margin-left:0.5rem"> <select id="f-stfilter" onchange="loadContacts()" style="flex:0;width:auto"><option value="">All</option><option>lead</option><option>prospect</option><option>customer</option><option>churned</option></select></h2>
+<div id="contact-list"><div class="empty">No contacts</div></div></div>
+</div>
+<div>
+<div class="card" id="detail-card" style="display:none">
+<h2>Contact: <span id="d-name" style="color:var(--cream)"></span></h2>
+<div class="form-row"><select id="d-stage" onchange="changeStage()"><option value="lead">Lead</option><option value="prospect">Prospect</option><option value="customer">Customer</option><option value="churned">Churned</option></select></div>
+<h2 style="margin-top:0.75rem">Log Activity</h2>
+<div class="form-row"><select id="a-kind"><option>note</option><option>call</option><option>email</option><option>meeting</option><option>deal</option></select></div>
+<textarea id="a-summary" rows="3" placeholder="Activity summary..."></textarea>
+<button class="btn btn-sm" style="margin-top:0.5rem" onclick="logActivity()">Log</button>
+<h2 style="margin-top:1rem">Activity History</h2>
+<div id="activity-list"><div class="empty">No activities</div></div>
+</div>
+</div>
+</div>
 </main>
-<footer>
-  <a href="https://stockyard.dev">stockyard.dev</a> &mdash; Creator & Small Business &mdash; Apache 2.0
-</footer>
 <script>
-fetch('/api/limits').then(r=>r.json()).then(d=>{
-  document.getElementById('stat-tier').textContent = d.tier.toUpperCase();
-});
-fetch('/api/items').then(r=>r.json()).then(d=>{
-  document.getElementById('stat-items').textContent = Array.isArray(d) ? d.length : '0';
-});
-</script>
-</body>
-</html>`)
+var curContact=null;
+function load(){fetch('/api/stats').then(function(r){return r.json()}).then(function(d){['lead','prospect','customer','churned'].forEach(function(s){var el=document.getElementById('stat-'+s);if(el)el.querySelector('.stat-value').textContent=d[s]||0})})}
+function loadContacts(){var s=document.getElementById('f-stfilter').value;var q=document.getElementById('f-search').value;fetch('/api/contacts'+(s||q?'?':'')+(s?'stage='+s:'')+(s&&q?'&':'')+( q?'q='+encodeURIComponent(q):'')).then(function(r){return r.json()}).then(function(list){var el=document.getElementById('contact-list');el.innerHTML=list.length?list.map(function(c){return'<div class="contact-item'+(curContact===c.id?' active':'')+'" onclick="selectContact('+JSON.stringify(c).replace(/"/g,'&quot;')+')"><div style="display:flex;justify-content:space-between;align-items:center"><span class="c-name">'+c.first_name+' '+c.last_name+'</span><span class="stage-badge stage-'+c.stage+'">'+c.stage+'</span></div><div class="c-meta">'+(c.company?c.company+' &bull; ':'')+c.email+'</div></div>'}).join(''):'<div class="empty">No contacts</div>'})}
+function selectContact(c){curContact=c.id;document.getElementById('detail-card').style.display='block';document.getElementById('d-name').textContent=c.first_name+' '+c.last_name;document.getElementById('d-stage').value=c.stage;loadActivities(c.id);loadContacts()}
+function loadActivities(id){fetch('/api/contacts/'+id+'/activities').then(function(r){return r.json()}).then(function(list){var el=document.getElementById('activity-list');el.innerHTML=list.length?list.map(function(a){return'<div class="activity-item"><span class="activity-kind">'+a.kind+'</span>'+a.summary+'<div style="font-size:0.7rem;color:var(--muted)">'+a.created_at+'</div></div>'}).join(''):'<div class="empty">No activities yet</div>'})}
+function changeStage(){if(!curContact)return;fetch('/api/contacts/'+curContact,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({stage:document.getElementById('d-stage').value})}).then(function(){loadContacts();load()})}
+function addContact(){var d={first_name:document.getElementById('f-fname').value.trim(),last_name:document.getElementById('f-lname').value.trim(),email:document.getElementById('f-email').value.trim(),phone:document.getElementById('f-phone').value.trim(),company:document.getElementById('f-co').value.trim(),stage:document.getElementById('f-stage').value};if(!d.first_name)return;fetch('/api/contacts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(){loadContacts();load()})}
+function logActivity(){if(!curContact)return;var d={kind:document.getElementById('a-kind').value,summary:document.getElementById('a-summary').value.trim()};if(!d.summary)return;fetch('/api/contacts/'+curContact+'/activities',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(){document.getElementById('a-summary').value='';loadActivities(curContact)})}
+load();loadContacts();
+</script></body></html>`)
