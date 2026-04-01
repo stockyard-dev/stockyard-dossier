@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  dossier:
+    build: .
+    ports:
+      - "9280:9280"
+    environment:
+      - PORT=9280
+      - DATA_DIR=/data
+      - DOSSIER_LICENSE_KEY=
+    volumes:
+      - dossier_data:/data
+    restart: unless-stopped
+volumes:
+  dossier_data:
