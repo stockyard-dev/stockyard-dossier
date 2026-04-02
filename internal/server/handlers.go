@@ -1,9 +1,0 @@
-package server
-import("encoding/json";"net/http";"strconv";"github.com/stockyard-dev/stockyard-dossier/internal/store")
-func(s *Server)handleListContacts(w http.ResponseWriter,r *http.Request){stage:=r.URL.Query().Get("stage");search:=r.URL.Query().Get("q");list,_:=s.db.ListContacts(stage,search);if list==nil{list=[]store.Contact{}};writeJSON(w,200,list)}
-func(s *Server)handleCreateContact(w http.ResponseWriter,r *http.Request){var c store.Contact;json.NewDecoder(r.Body).Decode(&c);if c.FirstName==""{writeError(w,400,"first_name required");return};if err:=s.db.CreateContact(&c);err!=nil{writeError(w,500,err.Error());return};writeJSON(w,201,c)}
-func(s *Server)handleUpdateContact(w http.ResponseWriter,r *http.Request){id,_:=strconv.ParseInt(r.PathValue("id"),10,64);var req struct{Stage string `json:"stage"`;Notes string `json:"notes"`};json.NewDecoder(r.Body).Decode(&req);if req.Stage!=""{s.db.UpdateContactStage(id,req.Stage)};if req.Notes!=""{s.db.UpdateContactNotes(id,req.Notes)};writeJSON(w,200,map[string]string{"status":"updated"})}
-func(s *Server)handleDeleteContact(w http.ResponseWriter,r *http.Request){id,_:=strconv.ParseInt(r.PathValue("id"),10,64);s.db.DeleteContact(id);writeJSON(w,200,map[string]string{"status":"deleted"})}
-func(s *Server)handleListActivities(w http.ResponseWriter,r *http.Request){id,_:=strconv.ParseInt(r.PathValue("id"),10,64);list,_:=s.db.ListActivities(id);if list==nil{list=[]store.Activity{}};writeJSON(w,200,list)}
-func(s *Server)handleAddActivity(w http.ResponseWriter,r *http.Request){id,_:=strconv.ParseInt(r.PathValue("id"),10,64);var a store.Activity;json.NewDecoder(r.Body).Decode(&a);a.ContactID=id;if a.Summary==""{writeError(w,400,"summary required");return};if a.Kind==""{a.Kind="note"};s.db.AddActivity(&a);writeJSON(w,201,a)}
-func(s *Server)handleStats(w http.ResponseWriter,r *http.Request){m,_:=s.db.StageCounts();writeJSON(w,200,m)}
