@@ -1,27 +1,56 @@
 package server
 import "net/http"
-func(s *Server)dashboard(w http.ResponseWriter,r *http.Request){w.Header().Set("Content-Type","text/html; charset=utf-8");w.Write([]byte(dashHTML))}
-const dashHTML=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dossier</title>
-<style>:root{--bg:#1a1410;--bg2:#241e18;--bg3:#2e261e;--rust:#c45d2c;--rl:#e8753a;--leather:#a0845c;--cream:#f0e6d3;--cm:#7a7060;--gold:#d4a843;--green:#4a9e5c;--mono:'JetBrains Mono',Consolas,monospace;--serif:'Libre Baskerville',Georgia,serif}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--cream);font-family:var(--mono);font-size:13px;line-height:1.6}.hdr{padding:.6rem 1.2rem;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-between;align-items:center}.hdr h1{font-family:var(--serif);font-size:1rem}.hdr h1 span{color:var(--rl)}.sub{font-size:.65rem;color:var(--cm)}.main{max-width:700px;margin:0 auto;padding:1rem}.search{width:100%;background:var(--bg2);border:1px solid var(--bg3);color:var(--cream);padding:.4rem .6rem;font-family:var(--mono);font-size:.78rem;margin-bottom:.6rem;outline:none}.search:focus{border-color:var(--rust)}.stats{display:flex;gap:1rem;margin-bottom:.8rem;flex-wrap:wrap}.stat{text-align:center}.stat-n{font-size:1.2rem;color:var(--rl);font-family:var(--serif)}.stat-l{font-size:.55rem;color:var(--cm);text-transform:uppercase;letter-spacing:1px}.btn{font-family:var(--mono);font-size:.68rem;padding:.3rem .6rem;border:1px solid;cursor:pointer;background:transparent}.btn-p{border-color:var(--rust);color:var(--rl)}.btn-p:hover{background:var(--rust);color:var(--cream)}.item{background:var(--bg2);border:1px solid var(--bg3);padding:.6rem;margin-bottom:.3rem;cursor:pointer;transition:border-color .15s}.item:hover{border-color:var(--leather)}.item h3{font-size:.82rem;margin-bottom:.15rem}.item-meta{font-size:.65rem;color:var(--cm);display:flex;gap:.5rem;flex-wrap:wrap}.empty{text-align:center;padding:2rem;color:var(--cm);font-style:italic;font-family:var(--serif)}.modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:100}.modal{background:var(--bg2);border:1px solid var(--bg3);padding:1.5rem;width:90%;max-width:500px;max-height:90vh;overflow-y:auto}.modal h2{font-family:var(--serif);font-size:.9rem;margin-bottom:1rem}label.fl{display:block;font-size:.65rem;color:var(--leather);text-transform:uppercase;letter-spacing:1px;margin-bottom:.2rem;margin-top:.5rem}input[type=text],input[type=number]{background:var(--bg);border:1px solid var(--bg3);color:var(--cream);padding:.35rem .5rem;font-family:var(--mono);font-size:.78rem;width:100%;outline:none}.del{color:var(--cm);cursor:pointer;font-size:.65rem;float:right}.del:hover{color:var(--rust)}</style></head>
-<body><div class="hdr"><div><h1><span>Stockyard</span> Dossier</h1><div class="sub">Self-hosted contact and CRM manager</div></div><button class="btn btn-p" onclick="showModal()">+ New</button></div>
-<div class="main"><div id="upgrade-banner" style="display:none;background:#241e18;border:1px solid #8b3d1a;border-left:3px solid #c45d2c;padding:.6rem 1rem;font-size:.78rem;color:#bfb5a3;margin-bottom:.8rem"><strong style="color:#f0e6d3">Free tier</strong> — 10 items max. <a href="https://stockyard.dev/dossier/" target="_blank" style="color:#e8753a">Upgrade to Pro →</a></div><div class="stats" id="stats"></div>
-<input class="search" id="search" placeholder="Search contacts..." oninput="debounceSearch()">
-<div id="list"></div></div>
-<div class="modal-bg" id="modal" style="display:none" onclick="if(event.target===this)hideModal()"><div class="modal"><h2 id="mt">New Contact</h2>
-<label class="fl">Name</label><input type="text" id="f-name" placeholder="Name"><label class="fl">Email</label><input type="text" id="f-email" placeholder="Email"><label class="fl">Phone</label><input type="text" id="f-phone" placeholder="Phone"><label class="fl">Company</label><input type="text" id="f-company" placeholder="Company"><label class="fl">Title</label><input type="text" id="f-title" placeholder="Title"><label class="fl">Tags</label><input type="text" id="f-tags" placeholder="Tags"><label class="fl">Notes</label><input type="text" id="f-notes" placeholder="Notes"><label class="fl">Status</label><input type="text" id="f-status" placeholder="Status">
-<div style="margin-top:1rem;display:flex;gap:.5rem"><button class="btn btn-p" onclick="save()">Save</button><button class="btn" style="color:var(--cm);border-color:var(--bg3)" onclick="hideModal()">Cancel</button></div></div></div>
+func(s *Server)dashboard(w http.ResponseWriter,r *http.Request){w.Header().Set("Content-Type","text/html");w.Write([]byte(dashHTML))}
+const dashHTML=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Dossier</title>
+<style>:root{--bg:#1a1410;--bg2:#241e18;--bg3:#2e261e;--rust:#e8753a;--leather:#a0845c;--cream:#f0e6d3;--cd:#bfb5a3;--cm:#7a7060;--gold:#d4a843;--green:#4a9e5c;--mono:'JetBrains Mono',monospace}
+*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--cream);font-family:var(--mono);line-height:1.5}
+.hdr{padding:1rem 1.5rem;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-between;align-items:center}.hdr h1{font-size:.9rem;letter-spacing:2px}
+.main{padding:1.5rem;max-width:900px;margin:0 auto}
+.search{width:100%;padding:.5rem .8rem;background:var(--bg2);border:1px solid var(--bg3);color:var(--cream);font-family:var(--mono);font-size:.78rem;margin-bottom:1rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.6rem}
+.card{background:var(--bg2);border:1px solid var(--bg3);padding:1rem}
+.card-name{font-size:.9rem;color:var(--cream);margin-bottom:.1rem}
+.card-company{font-size:.7rem;color:var(--gold)}
+.card-title{font-size:.65rem;color:var(--cm)}
+.card-contact{font-size:.65rem;color:var(--cd);margin-top:.4rem}.card-contact a{color:var(--rust)}
+.card-tags{margin-top:.3rem}
+.tag{font-size:.5rem;padding:.1rem .3rem;background:var(--bg3);color:var(--cm);margin-right:.2rem}
+.card-notes{font-size:.65rem;color:var(--cm);margin-top:.3rem;font-style:italic}
+.btn{font-size:.6rem;padding:.25rem .6rem;cursor:pointer;border:1px solid var(--bg3);background:var(--bg);color:var(--cd)}.btn:hover{border-color:var(--leather);color:var(--cream)}
+.btn-p{background:var(--rust);border-color:var(--rust);color:var(--bg)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--bg3);padding:1.5rem;width:400px;max-width:90vw}
+.modal h2{font-size:.8rem;margin-bottom:1rem;color:var(--rust)}
+.fr{margin-bottom:.5rem}.fr label{display:block;font-size:.55rem;color:var(--cm);text-transform:uppercase;letter-spacing:1px;margin-bottom:.15rem}
+.fr input,.fr textarea{width:100%;padding:.35rem .5rem;background:var(--bg);border:1px solid var(--bg3);color:var(--cream);font-family:var(--mono);font-size:.7rem}
+.acts{display:flex;gap:.4rem;justify-content:flex-end;margin-top:.8rem}
+.empty{text-align:center;padding:3rem;color:var(--cm);font-style:italic;font-size:.75rem}
+</style></head><body>
+<div class="hdr"><h1>DOSSIER</h1><button class="btn btn-p" onclick="openForm()">+ Add Contact</button></div>
+<div class="main">
+<input class="search" id="search" placeholder="Search contacts..." oninput="render()">
+<div class="grid" id="grid"></div>
+</div>
+<div class="modal-bg" id="mbg" onclick="if(event.target===this)cm()"><div class="modal" id="mdl"></div></div>
 <script>
-const API="/api/contacts";let editId=null,timer=null,curFilter="";
-function stc(s){return{"active":"#4a9e5c","open":"#4a9e5c","available":"#4a9e5c","growing":"#4a9e5c","done":"#4a9e5c","completed":"#4a9e5c","published":"#4a9e5c","resolved":"#4a9e5c","decided":"#4a9e5c","closed_won":"#4a9e5c","converted":"#4a9e5c","live":"#4a9e5c","applied":"#4a9e5c","sent":"#4a9e5c","approved":"#4a9e5c","booked":"#d4a843","in_progress":"#d4a843","processing":"#d4a843","reading":"#d4a843","investigating":"#d4a843","identified":"#d4a843","monitoring":"#d4a843","deploying":"#d4a843","qualified":"#d4a843","proposal":"#d4a843","negotiation":"#d4a843","assigned":"#d4a843","contacted":"#d4a843","pending":"#a0845c","draft":"#a0845c","unread":"#a0845c","new":"#a0845c","lead":"#a0845c","planning":"#a0845c","proposed":"#a0845c","trial":"#a0845c","failed":"#c45d2c","closed":"#7a7060","archived":"#7a7060","inactive":"#7a7060","closed_lost":"#c45d2c","churned":"#c45d2c","declined":"#c45d2c","rejected":"#c45d2c","rolled_back":"#c45d2c","superseded":"#7a7060","dormant":"#7a7060","paused":"#7a7060","stalled":"#c45d2c","away":"#a0845c","busy":"#c45d2c","offline":"#7a7060","dnd":"#c45d2c","bronze":"#a0845c","silver":"#bfb5a3","gold":"#d4a843","platinum":"#f0e6d3"}[s]||"#7a7060"}
-function showModal(id){editId=id||null;document.getElementById("mt").textContent=id?"Edit":"New";if(id){fetch(API+"/"+id).then(r=>r.json()).then(e=>{document.getElementById("f-name").value=e.name||"";document.getElementById("f-email").value=e.email||"";document.getElementById("f-phone").value=e.phone||"";document.getElementById("f-company").value=e.company||"";document.getElementById("f-title").value=e.title||"";document.getElementById("f-tags").value=e.tags||"";document.getElementById("f-notes").value=e.notes||"";document.getElementById("f-status").value=e.status||"";})}else{document.getElementById("f-name").value="";document.getElementById("f-email").value="";document.getElementById("f-phone").value="";document.getElementById("f-company").value="";document.getElementById("f-title").value="";document.getElementById("f-tags").value="";document.getElementById("f-notes").value="";document.getElementById("f-status").value=""}document.getElementById("modal").style.display="flex"}
-function hideModal(){document.getElementById("modal").style.display="none";editId=null}
-function debounceSearch(){clearTimeout(timer);timer=setTimeout(load,300)}
-function filterBy(v){curFilter=v;load()}
-async function loadStats(){const r=await fetch("/api/stats");const d=await r.json();const el=document.getElementById("stats");let h='<div class="stat"><div class="stat-n">'+d.total+'</div><div class="stat-l">Total</div></div>';if(d.by_status){for(const[k,v]of Object.entries(d.by_status)){h+='<div class="stat"><div class="stat-n" style="color:'+stc(k)+'">'+v+'</div><div class="stat-l">'+k.replace(/_/g," ")+'</div></div>'}};el.innerHTML=h}
-async function load(){let url=API;const q=document.getElementById("search").value;const p=[];if(q)p.push("q="+encodeURIComponent(q));if(curFilter)p.push("status="+curFilter);if(p.length)url+="?"+p.join("&");const r=await fetch(url);const d=await r.json();const items=d.contacts||[];const el=document.getElementById("list");if(!items.length){el.innerHTML='<div class="empty">No contacts yet</div>';loadStats();return}
-el.innerHTML=items.map(e=>{return '<div class="item" ondblclick="showModal(\''+e.id+'\')"><span class="del" onclick="event.stopPropagation();del(\''+e.id+'\')">x</span><h3>'+e.name+'</h3><div class="item-meta"><span>${e.email||"\u2014"}</span><span>${e.phone||"\u2014"}</span><span>${e.company||"\u2014"}</span><span>${e.title||"\u2014"}</span></div></div>'}).join("");loadStats()}
-async function save(){const body={"name":document.getElementById("f-name").value,"email":document.getElementById("f-email").value,"phone":document.getElementById("f-phone").value,"company":document.getElementById("f-company").value,"title":document.getElementById("f-title").value,"tags":document.getElementById("f-tags").value,"notes":document.getElementById("f-notes").value,"status":document.getElementById("f-status").value};const method=editId?"PUT":"POST";const url=editId?API+"/"+editId:API;await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});hideModal();load()}
-async function del(id){await fetch(API+"/"+id,{method:"DELETE"});load()}
-load();loadStats()
-fetch('/api/tier').then(r=>r.json()).then(j=>{if(j.tier==='free'){var b=document.getElementById('upgrade-banner');if(b)b.style.display='block'}}).catch(()=>{var b=document.getElementById('upgrade-banner');if(b)b.style.display='block'});
+const A='/api';let contacts=[];
+async function load(){const r=await fetch(A+'/contacts').then(r=>r.json());contacts=r.contacts||[];render();}
+function render(){const q=(document.getElementById('search').value||'').toLowerCase();
+let filtered=contacts.filter(c=>!q||(c.name+c.company+c.email+c.tags).toLowerCase().includes(q));
+if(!filtered.length){document.getElementById('grid').innerHTML='<div class="empty">No contacts'+(q?' matching':'')+'.</div>';return;}
+let h='';filtered.forEach(c=>{
+h+='<div class="card"><div style="display:flex;justify-content:space-between"><div class="card-name">'+esc(c.name)+'</div><button class="btn" onclick="del(\''+c.id+'\')" style="font-size:.5rem;color:var(--cm)">✕</button></div>';
+if(c.company)h+='<div class="card-company">'+esc(c.company)+'</div>';
+if(c.title)h+='<div class="card-title">'+esc(c.title)+'</div>';
+h+='<div class="card-contact">';if(c.email)h+='<a href="mailto:'+c.email+'">'+esc(c.email)+'</a><br>';if(c.phone)h+=esc(c.phone);h+='</div>';
+if(c.tags){const tags=c.tags.split(',');h+='<div class="card-tags">';tags.forEach(t=>{if(t.trim())h+='<span class="tag">'+esc(t.trim())+'</span>';});h+='</div>';}
+if(c.notes)h+='<div class="card-notes">'+esc(c.notes.substring(0,80))+'</div>';
+h+='</div>';});
+document.getElementById('grid').innerHTML=h;}
+async function del(id){if(confirm('Delete?')){await fetch(A+'/contacts/'+id,{method:'DELETE'});load();}}
+function openForm(){document.getElementById('mdl').innerHTML='<h2>Add Contact</h2><div class="fr"><label>Name</label><input id="f-n"></div><div class="fr"><label>Email</label><input id="f-e" type="email"></div><div class="fr"><label>Phone</label><input id="f-p"></div><div class="fr"><label>Company</label><input id="f-co"></div><div class="fr"><label>Title</label><input id="f-t"></div><div class="fr"><label>Tags (comma separated)</label><input id="f-tg" placeholder="lead, partner, vendor"></div><div class="fr"><label>Notes</label><textarea id="f-nt" rows="2"></textarea></div><div class="acts"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="sub()">Add</button></div>';document.getElementById('mbg').classList.add('open');}
+async function sub(){await fetch(A+'/contacts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:document.getElementById('f-n').value,email:document.getElementById('f-e').value,phone:document.getElementById('f-p').value,company:document.getElementById('f-co').value,title:document.getElementById('f-t').value,tags:document.getElementById('f-tg').value,notes:document.getElementById('f-nt').value})});cm();load();}
+function cm(){document.getElementById('mbg').classList.remove('open');}
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+load();
 </script></body></html>`
