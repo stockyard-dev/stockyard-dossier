@@ -1,44 +1,73 @@
 # Stockyard Dossier
 
-**CRM for solo founders and consultants — contacts, notes, follow-up reminders, deal pipeline**
+**Self-hosted contact and CRM manager.** Single Go binary, embedded SQLite, no external dependencies.
+Part of the [Stockyard](https://stockyard.dev) suite of self-hosted developer tools.
 
-Part of the [Stockyard](https://stockyard.dev) family of self-hosted developer tools.
+Store contacts, log interactions, set follow-up reminders, track deal history.
 
-## Quick Start
-
-```bash
-docker run -p 9280:9280 -v dossier_data:/data ghcr.io/stockyard-dev/stockyard-dossier
-```
-
-Or with docker-compose:
+## Install
 
 ```bash
-docker-compose up -d
+curl -fsSL https://stockyard.dev/dossier/install.sh | sh
 ```
 
-Open `http://localhost:9280` in your browser.
+That downloads the latest release for your platform from
+[GitHub releases](https://github.com/stockyard-dev/stockyard-dossier/releases/latest)
+and drops a single binary on disk. Linux (amd64/arm64), macOS (Intel/Apple
+Silicon), and Windows (amd64) are all supported.
+
+Then run it:
+
+```bash
+stockyard-dossier
+```
+
+Dashboard at [http://localhost:9080/ui](http://localhost:9080/ui).
+HTTP API at `http://localhost:9080/api`. Data lives in `~/.stockyard/dossier/`
+by default — override with `-data <path>` or `DATA_DIR=<path>`.
+
+## Personalization
+
+Dossier is one of 169 tools in the Stockyard suite. When you install it via
+the [Stockyard launcher](https://github.com/stockyard-dev/stockyard-launcher) or
+through the AI toolkit builder at [stockyard.dev](https://stockyard.dev), the
+launcher writes a `config.json` into the data directory that personalizes the
+dashboard for your specific use case — custom field labels, default values,
+terminology that matches your business.
+
+Without `config.json`, the tool runs with sensible defaults for the
+"self-hosted contact and crm manager" category. With it, the same binary serves a dashboard
+tailored to your business in 30 seconds, no rebuild required. Read the
+config schema at `GET /api/config`.
 
 ## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `9280` | HTTP port |
-| `DATA_DIR` | `./data` | SQLite database directory |
-| `DOSSIER_LICENSE_KEY` | *(empty)* | Pro license key |
+| `PORT` | `9080` | HTTP listen port |
+| `DATA_DIR` | `~/.stockyard/dossier` | SQLite + config directory |
+| `STOCKYARD_LICENSE_KEY` | *(empty)* | Pro license key (see below) |
+
+Command-line flags `-port` and `-data` override the env vars.
 
 ## Free vs Pro
 
 | | Free | Pro |
 |-|------|-----|
-| Limits | 50 contacts, no pipeline | Unlimited contacts and pipeline |
-| Price | Free | $2.99/mo |
+| Use case | Personal, hobby, small teams | Production, paid customers |
+| Limits | Per-tool free tier (see [pricing](https://stockyard.dev/pricing/)) | Unlimited |
+| Price | $0/mo | $0.99/mo per tool, or $7.99/mo for the full Stockyard suite |
 
-Get a Pro license at [stockyard.dev/tools/](https://stockyard.dev/tools/).
+Get a Pro license at [stockyard.dev/pricing/?plan=dossier-pro](https://stockyard.dev/pricing/?plan=dossier-pro).
+14-day free trial, cancel anytime, your data stays on your machine either way.
 
-## Category
+## Screenshot
 
-Creator & Small Business
+See the live dashboard and feature tour at
+[stockyard.dev/dossier/](https://stockyard.dev/dossier/).
 
 ## License
 
-Apache 2.0
+BSL 1.1 — free for non-production use, free for production use under the
+Stockyard Pro license, converts to Apache 2.0 four years after release.
+See `LICENSE` for the full terms.
