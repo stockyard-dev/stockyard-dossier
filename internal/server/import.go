@@ -262,22 +262,13 @@ func (s *Server) commitImport(w http.ResponseWriter, r *http.Request) {
 		contacts = append(contacts, c)
 	}
 
-	// Free-tier limit check, AFTER building the contact slice so we can
-	// run the dedup dry-run. Previously this used len(allRows) which
-	// counted duplicates and rows-with-no-name toward the limit, falsely
-	// rejecting imports that would only insert a few new records. Now
-	// we count exactly what would be inserted.
-	if s.limits.MaxItems > 0 {
-		current := s.db.Count()
-		wouldInsert := s.db.CountNewInBatch(contacts)
-		if current+wouldInsert > s.limits.MaxItems {
-			we(w, 402, fmt.Sprintf(
-				"this import would push you to %d records (current %d, %d new after dedup) — free tier limit is %d. Upgrade at https://stockyard.dev/dossier/",
-				current+wouldInsert, current, wouldInsert, s.limits.MaxItems,
-			))
-			return
-		}
-	}
+	// Note: Stockyard does not have a free tier with item caps — the
+	// 14-day paid trial is the gate, enforced upstream by the license
+	// middleware in server.go which 402s POST /api/import/commit when
+	// no valid license is present. By the time the import handler runs,
+	// the caller is licensed and there are no per-item limits to check.
+	// CountNewInBatch is still used by future per-tier metering if we
+	// ever add it; for now, all writes are unlimited once licensed.
 
 	result, err := s.db.ImportBatch(contacts)
 	if err != nil {
