@@ -71,13 +71,40 @@ body{background:var(--bg);color:var(--cream);font-family:var(--serif);line-heigh
 .empty{text-align:center;padding:3rem;color:var(--cm);font-style:italic;font-size:.85rem}
 .count-label{font-family:var(--mono);font-size:.6rem;color:var(--cm);margin-bottom:.5rem}
 @media(max-width:600px){.cards{grid-template-columns:1fr}.row2{grid-template-columns:1fr}.toolbar{flex-direction:column}.search{min-width:100%}}
+
+/* Import flow */
+.modal-wide{width:720px}
+.import-drop{border:2px dashed var(--bg3);padding:2rem 1.5rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;font-family:var(--mono);font-size:.75rem;color:var(--cd)}
+.import-drop:hover,.import-drop.dragging{border-color:var(--rust);background:var(--bg)}
+.import-drop strong{display:block;font-size:.85rem;color:var(--cream);margin-bottom:.4rem}
+.import-drop em{display:block;font-size:.6rem;color:var(--cm);margin-top:.6rem;font-style:normal;letter-spacing:.5px;text-transform:uppercase}
+.import-drop input[type=file]{display:none}
+.import-tip{font-size:.65rem;color:var(--cm);margin-top:.8rem;line-height:1.5;font-style:italic}
+.import-table{width:100%;border-collapse:collapse;margin-top:.8rem;font-family:var(--mono);font-size:.6rem}
+.import-table th,.import-table td{padding:.4rem .5rem;border:1px solid var(--bg3);text-align:left;vertical-align:top;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.import-table th{background:var(--bg);color:var(--cm);text-transform:uppercase;font-size:.5rem;letter-spacing:1px}
+.import-table td{color:var(--cd)}
+.import-table select{width:100%;padding:.25rem .3rem;background:var(--bg);border:1px solid var(--bg3);color:var(--cream);font-family:var(--mono);font-size:.55rem}
+.import-table select:focus{outline:none;border-color:var(--leather)}
+.import-summary{font-family:var(--mono);font-size:.7rem;color:var(--cd);margin:.8rem 0;padding:.6rem .8rem;background:var(--bg);border-left:3px solid var(--leather)}
+.import-summary strong{color:var(--cream)}
+.import-warning{font-family:var(--mono);font-size:.6rem;color:var(--gold);margin-top:.4rem;padding:.4rem .6rem;border-left:2px solid var(--gold);background:var(--bg)}
+.import-result{font-family:var(--mono);font-size:.7rem;line-height:1.8;padding:1rem;background:var(--bg);border-left:3px solid var(--green)}
+.import-result strong{color:var(--green);font-size:1rem;display:block;margin-bottom:.4rem}
+.import-result .row{display:flex;justify-content:space-between;color:var(--cd)}
+.import-result .row span:last-child{color:var(--cream);font-weight:700}
+.import-error{font-family:var(--mono);font-size:.65rem;color:var(--red);padding:.8rem;background:var(--bg);border-left:3px solid var(--red);margin-top:.5rem;line-height:1.6}
+.import-table-wrap{max-height:300px;overflow:auto;border:1px solid var(--bg3);margin-top:.5rem}
 </style>
 </head>
 <body>
 
 <div class="hdr">
 <h1 id="dash-title"><span>&#9670;</span> DOSSIER</h1>
+<div style="display:flex;gap:.5rem;flex-wrap:wrap">
+<button class="btn" onclick="openImport()">Import CSV</button>
 <button class="btn btn-p" onclick="openForm()">+ Add Contact</button>
+</div>
 </div>
 
 <div class="main">
@@ -400,6 +427,248 @@ return d.innerHTML;
 }
 
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal()});
+
+// ─── CSV Import ───────────────────────────────────────────────────
+//
+// Three-state modal flow:
+//   1. Drop zone — user picks/drops a CSV file
+//   2. Mapping UI — auto-detected column → field map, user can adjust
+//   3. Result — created/skipped/failed counts after commit
+//
+// State is held in window._import so closing and reopening the modal
+// resets cleanly. We don't bother with a state machine because each
+// transition is a single function call that rewrites the modal HTML.
+
+window._import=null;
+
+function openImport(){
+window._import={csv:'',headers:[],sample:[],mapping:{},fields:[],totalRows:0,warnings:[]};
+renderImportStep1();
+document.getElementById('mbg').classList.add('open');
+}
+
+// Step 1: drop zone
+function renderImportStep1(){
+var h='<h2>IMPORT CONTACTS FROM CSV</h2>';
+h+='<div class="import-drop" id="drop" onclick="document.getElementById(\'csv-file\').click()">';
+h+='<strong>Drop a CSV file here</strong>';
+h+='or click to browse';
+h+='<em>Common sources: Mailchimp, HubSpot, Google Contacts, any spreadsheet exported as CSV</em>';
+h+='<input type="file" id="csv-file" accept=".csv,text/csv" onchange="onCSVFileChosen(this)">';
+h+='</div>';
+h+='<div class="import-tip">We will show you which columns we detected before anything is imported. Duplicates are skipped automatically (matched on name + email + phone).</div>';
+h+='<div class="acts"><button class="btn" onclick="closeModal()">Cancel</button></div>';
+var mdl=document.getElementById('mdl');
+mdl.className='modal';
+mdl.innerHTML=h;
+
+// Wire up drag-and-drop on the drop zone after the HTML is in place
+var dz=document.getElementById('drop');
+dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('dragging')});
+dz.addEventListener('dragleave',function(){dz.classList.remove('dragging')});
+dz.addEventListener('drop',function(e){
+e.preventDefault();
+dz.classList.remove('dragging');
+if(e.dataTransfer.files.length){onCSVFileRead(e.dataTransfer.files[0])}
+});
+}
+
+function onCSVFileChosen(input){
+if(input.files&&input.files[0])onCSVFileRead(input.files[0]);
+}
+
+function onCSVFileRead(file){
+if(!file)return;
+// Refuse anything obviously not a CSV based on size and extension.
+// 5MB matches the server cap; bigger files get rejected client-side
+// so the user doesn't wait for an upload that will fail.
+if(file.size>5*1024*1024){
+alert('That CSV is larger than 5MB. The current cap is about 50,000 contacts. If you need more, email hello@stockyard.dev.');
+return;
+}
+var reader=new FileReader();
+reader.onload=function(e){
+window._import.csv=e.target.result;
+runImportPreview();
+};
+reader.onerror=function(){alert('Could not read the file. Try again, or email hello@stockyard.dev.')};
+reader.readAsText(file);
+}
+
+// Step 2: call /api/import/preview, show mapping UI
+async function runImportPreview(){
+renderImportLoading('Reading your CSV...');
+try{
+var resp=await fetch(A+'/import/preview',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({csv:window._import.csv})
+});
+var data=await resp.json();
+if(!resp.ok){
+renderImportError(data.error||('Preview failed: HTTP '+resp.status));
+return;
+}
+window._import.headers=data.headers||[];
+window._import.sample=data.sample_rows||[];
+window._import.mapping=data.mapping||{};
+window._import.fields=data.fields||[];
+window._import.totalRows=data.total_rows||0;
+window._import.warnings=data.warnings||[];
+renderImportStep2();
+}catch(e){
+renderImportError('Could not reach the server: '+e.message);
+}
+}
+
+function renderImportStep2(){
+var d=window._import;
+var h='<h2>REVIEW COLUMNS</h2>';
+h+='<div class="import-summary">';
+h+='Found <strong>'+d.totalRows+'</strong> row'+(d.totalRows===1?'':'s')+' across <strong>'+d.headers.length+'</strong> column'+(d.headers.length===1?'':'s')+'. ';
+h+='Match each column to a contact field. Columns set to <em>Skip</em> are ignored. ';
+h+='At least one column must be mapped to <strong>Name</strong>.';
+h+='</div>';
+if(d.warnings.length){
+d.warnings.forEach(function(w){h+='<div class="import-warning">'+esc(w)+'</div>'});
+}
+
+// Mapping table — header row shows headers + dropdowns, body shows sample rows
+h+='<div class="import-table-wrap"><table class="import-table">';
+h+='<thead><tr>';
+d.headers.forEach(function(header,i){
+h+='<th>'+esc(header)+'<br><select id="map-'+i+'" onchange="onMappingChange('+i+')">';
+d.fields.forEach(function(f){
+var sel=(d.mapping[header]===f.key)?' selected':'';
+h+='<option value="'+esc(f.key)+'"'+sel+'>'+esc(f.label)+'</option>';
+});
+h+='</select></th>';
+});
+h+='</tr></thead>';
+h+='<tbody>';
+d.sample.forEach(function(row){
+h+='<tr>';
+d.headers.forEach(function(_,i){
+var v=(i<row.length)?row[i]:'';
+h+='<td title="'+esc(v)+'">'+esc(v)+'</td>';
+});
+h+='</tr>';
+});
+h+='</tbody></table></div>';
+
+h+='<div class="acts">';
+h+='<button class="btn" onclick="closeModal()">Cancel</button>';
+h+='<button class="btn btn-p" id="import-go" onclick="runImportCommit()">Import '+d.totalRows+' Row'+(d.totalRows===1?'':'s')+'</button>';
+h+='</div>';
+
+var mdl=document.getElementById('mdl');
+mdl.className='modal modal-wide';
+mdl.innerHTML=h;
+updateImportButtonState();
+}
+
+function onMappingChange(headerIdx){
+var d=window._import;
+var header=d.headers[headerIdx];
+var newField=document.getElementById('map-'+headerIdx).value;
+d.mapping[header]=newField;
+updateImportButtonState();
+}
+
+function updateImportButtonState(){
+// Disable the Import button if no column is mapped to Name.
+var d=window._import;
+var hasName=false;
+for(var k in d.mapping){if(d.mapping[k]==='name'){hasName=true;break}}
+var btn=document.getElementById('import-go');
+if(btn){
+btn.disabled=!hasName;
+btn.style.opacity=hasName?'1':'.4';
+btn.style.cursor=hasName?'pointer':'not-allowed';
+btn.title=hasName?'':'Map at least one column to Name';
+}
+}
+
+// Step 3: call /api/import/commit, show result
+async function runImportCommit(){
+var d=window._import;
+// Final client-side guard — server validates this too but the
+// button shouldn't have been clickable in the first place.
+var hasName=false;
+for(var k in d.mapping){if(d.mapping[k]==='name'){hasName=true;break}}
+if(!hasName){alert('Map at least one column to Name first.');return}
+
+renderImportLoading('Importing '+d.totalRows+' row'+(d.totalRows===1?'':'s')+'...');
+try{
+var resp=await fetch(A+'/import/commit',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({csv:d.csv,mapping:d.mapping})
+});
+var data=await resp.json();
+if(!resp.ok){
+renderImportError(data.error||('Import failed: HTTP '+resp.status));
+return;
+}
+renderImportStep3(data);
+load(); // refresh the contact list in the background
+}catch(e){
+renderImportError('Could not reach the server: '+e.message);
+}
+}
+
+function renderImportStep3(result){
+var h='<h2>IMPORT COMPLETE</h2>';
+h+='<div class="import-result">';
+h+='<strong>'+result.created+' contact'+(result.created===1?'':'s')+' added</strong>';
+h+='<div class="row"><span>New contacts created</span><span>'+result.created+'</span></div>';
+h+='<div class="row"><span>Duplicates skipped</span><span>'+result.skipped+'</span></div>';
+if(result.failed>0){
+h+='<div class="row"><span>Rows that failed</span><span style="color:var(--red)">'+result.failed+'</span></div>';
+}
+h+='</div>';
+
+if(result.errors&&result.errors.length){
+h+='<div class="import-error"><strong style="display:block;margin-bottom:.4rem">Failed rows:</strong>';
+result.errors.slice(0,10).forEach(function(err){
+h+='&bull; '+esc(err)+'<br>';
+});
+if(result.errors.length>10){
+h+='<em>...and '+(result.errors.length-10)+' more</em>';
+}
+h+='</div>';
+}
+
+h+='<div class="acts" style="margin-top:1.2rem">';
+h+='<button class="btn btn-p" onclick="closeModal()">Done</button>';
+h+='</div>';
+
+var mdl=document.getElementById('mdl');
+mdl.className='modal';
+mdl.innerHTML=h;
+}
+
+function renderImportLoading(msg){
+var h='<h2>IMPORTING</h2>';
+h+='<div style="text-align:center;padding:2rem;font-family:var(--mono);font-size:.75rem;color:var(--cd)">';
+h+=esc(msg);
+h+='</div>';
+var mdl=document.getElementById('mdl');
+mdl.className='modal';
+mdl.innerHTML=h;
+}
+
+function renderImportError(msg){
+var h='<h2>IMPORT ERROR</h2>';
+h+='<div class="import-error">'+esc(msg)+'</div>';
+h+='<div class="acts" style="margin-top:1rem">';
+h+='<button class="btn" onclick="renderImportStep1()">Try Again</button>';
+h+='<button class="btn" onclick="closeModal()">Cancel</button>';
+h+='</div>';
+var mdl=document.getElementById('mdl');
+mdl.className='modal';
+mdl.innerHTML=h;
+}
 
 // ─── Personalization: load /api/config and inject overrides ───────
 

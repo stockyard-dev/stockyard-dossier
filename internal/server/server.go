@@ -53,6 +53,12 @@ func New(db *store.DB, limits Limits, dataDir string) *Server {
 	s.mux.HandleFunc("GET /api/extras/{resource}/{id}", s.getExtras)
 	s.mux.HandleFunc("PUT /api/extras/{resource}/{id}", s.putExtras)
 
+	// CSV import — two-step preview/commit flow. See import.go for the
+	// rationale on splitting these into separate endpoints instead of a
+	// single upload-and-import call.
+	s.mux.HandleFunc("POST /api/import/preview", s.previewImport)
+	s.mux.HandleFunc("POST /api/import/commit", s.commitImport)
+
 	// Dashboard and root
 	s.mux.HandleFunc("GET /ui", s.dashboard)
 	s.mux.HandleFunc("GET /ui/", s.dashboard)
