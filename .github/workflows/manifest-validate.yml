@@ -1,0 +1,45 @@
+# Validates this repo's stockyard.json against the spec in the main
+# Stockyard repo. Advisory-only: E040-E042 (cross-tool graph) runs at
+# platform boot, not here.
+name: manifest-validate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'stockyard.json'
+      - '.github/workflows/manifest-validate.yml'
+  pull_request:
+    paths:
+      - 'stockyard.json'
+      - '.github/workflows/manifest-validate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install stockyard-manifest-validate
+        run: |
+          go install github.com/stockyard-dev/stockyard/cmd/stockyard-manifest-validate@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Fetch canonical catalog.json
+        run: |
+          curl -sSfL -o /tmp/catalog.json \
+            https://raw.githubusercontent.com/stockyard-dev/Stockyard/main/site/tools/catalog.json
+
+      - name: Validate stockyard.json
+        run: |
+          stockyard-manifest-validate \
+            --strict \
+            --github \
+            --catalog=/tmp/catalog.json \
+            stockyard.json
