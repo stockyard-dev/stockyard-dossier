@@ -1,0 +1,51 @@
+{
+  "schema_version": "1",
+  "tool": {
+    "slug": "dossier",
+    "display_name": "Dossier",
+    "version": "1.0.0",
+    "description": "Store contacts, log interactions, set follow-up reminders, track deal history. HubSpot CRM but your contact data doesn't live in HubSpot's database.",
+    "category": "finance"
+  },
+  "data_model": {
+    "tables": [
+      {
+        "name": "contacts",
+        "sync": "replicated",
+        "backup": "encrypted",
+        "columns": [
+          {"name": "id",          "type": "text",      "primary_key": true},
+          {"name": "name",        "type": "text",      "required": true, "display": "Name"},
+          {"name": "email",       "type": "text",      "pii": true,      "display": "Email"},
+          {"name": "phone",       "type": "text",      "pii": true,      "display": "Phone"},
+          {"name": "company",     "type": "text",      "display": "Company"},
+          {"name": "title",       "type": "text",      "display": "Title"},
+          {"name": "tags",        "type": "text",      "display": "Tags"},
+          {"name": "notes",       "type": "text",      "pii": true,      "display": "Notes"},
+          {"name": "status",      "type": "text",      "enum": ["active","archived"], "display": "Status"},
+          {"name": "created_at",  "type": "timestamp", "editable": false},
+          {"name": "import_hash", "type": "text",      "editable": false, "_comment": "Internal dedup hash for CSV import"}
+        ]
+      },
+      {
+        "name": "extras",
+        "sync": "replicated",
+        "backup": "encrypted",
+        "columns": [
+          {"name": "resource",  "type": "text", "primary_key": true, "_comment": "Composite PK part 1"},
+          {"name": "record_id", "type": "text", "primary_key": true, "_comment": "Composite PK part 2"},
+          {"name": "data",      "type": "json", "_comment": "Custom-field JSON blob keyed by (resource, record_id)"}
+        ]
+      }
+    ]
+  },
+  "config": {"fields": []},
+  "events": {
+    "publishes": [
+      {"topic": "contacts.created", "description": "A new contact was added to the dossier database."},
+      {"topic": "contacts.updated", "description": "An existing contact was modified. Payload is the full updated record."},
+      {"topic": "contacts.deleted", "description": "A contact was removed from the dossier database."}
+    ],
+    "subscribes": []
+  }
+}
