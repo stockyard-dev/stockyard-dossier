@@ -6,10 +6,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/stockyard-dev/stockyard-dossier/internal/server"
 	"github.com/stockyard-dev/stockyard-dossier/internal/store"
+	"github.com/stockyard-dev/stockyard/bus"
 )
 
 // version is set at build time via -ldflags="-X main.version=v3.6.0"
@@ -56,6 +58,17 @@ func main() {
 		log.Fatalf("dossier: %v", err)
 	}
 	defer db.Close()
+
+	// Bus lives one level up from the per-tool data dir so all tools in
+	// a bundle share a single _bus.db. Bus failures are non-fatal —
+	// dossier still serves its users when the bus is unavailable.
+	if b, berr := bus.Open(filepath.Dir(dataDir), "dossier"); berr != nil {
+		log.Printf("dossier: bus disabled: %v", berr)
+	} else {
+		defer b.Close()
+		db.SetPublisher(b)
+		log.Printf("dossier: bus enabled at %s", filepath.Join(filepath.Dir(dataDir), "_bus.db"))
+	}
 
 	srv := server.New(db, server.DefaultLimits(dataDir), dataDir)
 

@@ -13,7 +13,37 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type DB struct{ db *sql.DB }
+type DB struct {
+	db  *sql.DB
+	pub Publisher // optional; nil when bus is disabled or unconfigured
+}
+
+// Publisher is the narrow slice of github.com/stockyard-dev/stockyard/bus
+// that dossier uses. Declared as an interface here so the store package
+// stays decoupled from the bus package (no import cycle risk, easy to
+// stub in tests, and the store keeps working when the bus is disabled).
+type Publisher interface {
+	Publish(topic string, payload any) (int64, error)
+}
+
+// SetPublisher wires an optional bus publisher into the store. Safe to
+// call with nil; subsequent mutations will skip publishing. Intended to
+// be called once at boot after store.Open succeeds.
+func (d *DB) SetPublisher(p Publisher) { d.pub = p }
+
+// publish emits one event and swallows errors — the bus is a side
+// channel, and a publish failure must not cause the mutation to appear
+// failed to the caller. Errors surface only via the bus's own logs.
+func (d *DB) publish(topic string, payload any) {
+	if d.pub == nil {
+		return
+	}
+	if _, err := d.pub.Publish(topic, payload); err != nil {
+		// Intentional log-only. See README: the only signal that the
+		// bus is misbehaving for a publisher is a log line.
+		_ = err
+	}
+}
 
 type Contact struct {
 	ID         string `json:"id"`
@@ -206,6 +236,9 @@ func (d *DB) Create(e *Contact) error {
 		 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		e.ID, e.Name, e.Email, e.Phone, e.Company, e.Title, e.Tags, e.Notes, e.Status, e.CreatedAt, e.ImportHash,
 	)
+	if err == nil {
+		d.publish("contacts.created", e)
+	}
 	return err
 }
 
@@ -250,11 +283,17 @@ func (d *DB) Update(e *Contact) error {
 		 WHERE id=?`,
 		e.Name, e.Email, e.Phone, e.Company, e.Title, e.Tags, e.Notes, e.Status, e.ImportHash, e.ID,
 	)
+	if err == nil {
+		d.publish("contacts.updated", e)
+	}
 	return err
 }
 
 func (d *DB) Delete(id string) error {
 	_, err := d.db.Exec(`DELETE FROM contacts WHERE id=?`, id)
+	if err == nil {
+		d.publish("contacts.deleted", map[string]string{"id": id})
+	}
 	return err
 }
 
