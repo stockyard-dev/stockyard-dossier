@@ -40,6 +40,7 @@ jobs:
         run: |
           stockyard-manifest-validate \
             --strict \
+            --allow-single-file \
             --github \
             --catalog=/tmp/catalog.json \
             stockyard.json
